@@ -28,15 +28,16 @@ async def api_get_weather(city: str, degrees: DegType, client_session: aiohttp.C
 
 
 async def authenticate_user(username: str, password: str) -> Optional[Users]:
-    user = await Users.get(username=username)
+    user = await Users.get_or_none(username=username)
     if user and bcrypt.verify(password, user.password_hash):
         return user
     return None
 
 
 async def create_user(username: str, password: str) -> Optional[Users]:
-    user = await Users.get(username=username)
-    if not user:
+    existing_user = await Users.get_or_none(username=username)
+    if existing_user is None:
         user = await Users.create(username=username, password_hash=bcrypt.hash(password))
+        print('here')
         return user
     return None
