@@ -2,18 +2,20 @@ from typing import Optional
 
 import aiohttp
 import aioredis
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, HTTPException, status, Depends
+from fastapi.responses import RedirectResponse
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
 from fastapi_cache.decorator import cache
 from tortoise.contrib.fastapi import register_tortoise
-from models import Users, UserPydantic
 
 from config import settings
-from utils import api_get_weather, DegType
+from models import UserPydantic
+from utils import api_get_weather, DegType, authenticate_user, create_user
 
 app = FastAPI()
-
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 register_tortoise(
     app,
     config={
@@ -32,7 +34,6 @@ register_tortoise(
         'apps': {
             'models': {
                 'models': ['models'],
-                # If no default_connection specified, defaults to 'default'
                 'default_connection': 'default',
             }
         }
@@ -43,13 +44,23 @@ register_tortoise(
 
 
 @app.get('/signup')
-async def signup():
-    pass
+async def signup(user_data: UserPydantic):
+    user = create_user(user_data.username, user_data.password_hash)
+    if not user:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail="user already exists")
+    return RedirectResponse("/auth/token")
 
 
 @app.get('/auth/token')
-async def login():
-    pass
+async def login(login_form: OAuth2PasswordRequestForm = Depends()):
+    username = login_form.username
+    password = login_form.password
+    if authenticate_user(username, password):
+        return {
+            "access_token": "test",
+            "token_type": "bearer",
+        }
+    raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="wrong username or password")
 
 
 @app.get('/forecast')
