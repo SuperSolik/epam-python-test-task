@@ -10,9 +10,9 @@ from fastapi_cache.backends.redis import RedisBackend
 from fastapi_cache.decorator import cache
 from tortoise.contrib.fastapi import register_tortoise
 
-from config import settings
-from models import UserPydantic, Users, UserLoginModel
-from utils import api_get_weather, DegType, authenticate_user, create_user
+from .config import settings
+from .models import UserPydantic, Users, UserLoginModel
+from .utils import api_get_weather, DegType, authenticate_user, create_user
 
 app = FastAPI()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
@@ -33,7 +33,7 @@ register_tortoise(
         },
         'apps': {
             'models': {
-                'models': ['models'],
+                'models': ['app.models'],
                 'default_connection': 'default',
             }
         }
@@ -89,9 +89,13 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 
 @app.get('/forecast')
 @cache(expire=60)
-async def get_forecast(city: str, deg: Optional[str] = Query('c', regex='[cf]'),
+async def get_forecast(city: str, deg: Optional[str] = Query(..., regex='^[cf]$'),
                        current_user: UserPydantic = Depends(get_current_user)):
-    return await api_get_weather(city, DegType.CELSIUS if deg == 'c' else DegType.FAHRENHEIT, app.client_session)
+    result = await api_get_weather(city, DegType.CELSIUS if deg == 'c' else DegType.FAHRENHEIT, app.client_session)
+    error_msg = result.get('error')
+    if error_msg:
+        raise HTTPException(404, detail=error_msg)
+    return result
 
 
 @app.on_event('startup')
