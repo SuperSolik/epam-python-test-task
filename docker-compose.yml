@@ -1,0 +1,20 @@
+version: "3.0"
+
+services:
+  weather_app:
+    image: "supersolik_weather_app:latest"
+    build: .
+    env_file:
+      - docker.env
+    ports:
+    - 3030:3030
+
+  postgres_weather:
+    image: postgres
+    restart: always
+    env_file:
+      - docker.env
+
+  redis_weather:
+    image: redis
+    restart: always
