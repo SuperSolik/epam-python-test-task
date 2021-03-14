@@ -3,6 +3,22 @@
 ## Requirements
 Python3.9, PostgreSQL, Redis 
 
+### API
+
+`POST /login` login using JSON: `{"username": "<your-username>", {"password": "<your-password>"}`.  
+Returns `{"msg": "user created"}` on success or json with details on failure
+
+`POST /auth/token` authorize using form data: `username=<your-username>&password=<your-password>`.  
+Returns `{"access_token": "<your-auth-token>", "token_type": "bearere""}` on success or json with details on failure
+
+`GET /forecast` get forecast for specified city, only for authorized users, else returns `401 Not authorized`.  
+Returns json with current weather and forecast (for current day, because of the limits of weather API free plan) on success or json with details on failure.
+Query params:
+* `city` - required, name of the city for weather report
+* `units` - required, degrees type for temperature values: m - for Celsius (metric), f - for Fahrenheit (imperial)
+
+`GET /docs` - full automatically generated documentation
+
 ## Run tests
 ```python3
 pip install -r requirements.txt
