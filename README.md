@@ -10,7 +10,7 @@ python -m pytest
 ```
 
 ## Run app
-### Environments variables
+### Environment variables
 
 ```dotenv
 REDIS_URL="redis://your-redis-url"
