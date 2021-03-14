@@ -11,7 +11,7 @@ load_dotenv(dotenv_path=ENV_PATH, verbose=True)
 
 
 class Settings(BaseSettings):
-    WEATHER_API_ENDPOINT = "https://api.weatherapi.com/v1/forecast.json?key={key}&q={city}&days=3&aqi=no&alerts=no"
+    WEATHER_API_ENDPOINT = "http://api.weatherstack.com/forecast?access_key={key}&units={units}&query={city}"
     WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
     REDIS_URL = os.getenv("REDIS_URL") or "redis://localhost"
     PG_HOST = os.getenv("POSTGRES_HOST")
@@ -23,4 +23,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-print(settings)
