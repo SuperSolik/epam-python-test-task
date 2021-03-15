@@ -11,7 +11,7 @@ from app.config import settings
 
 @pytest.fixture(scope='module')
 def client() -> Generator:
-    # setup test database and test client
+    # setup test database and test client for all test cases
     initializer(["app.models"],
                 db_url=f'postgres://{settings.PG_USER}:{settings.PG_PASSWORD}@{settings.PG_HOST}:{settings.PG_PORT}/test',
                 app_label='app')
@@ -50,12 +50,12 @@ def test_duplicate_login(client: TestClient):
 
 
 def test_auth_not_existing_user(client: TestClient):
-    response = client.post("/auth/token", data={"username": "not_existing_user", "password": "123"})
+    response = client.post("/login", data={"username": "not_existing_user", "password": "123"})
     assert response.status_code == 401
 
 
 def test_auth_wrong_password(client: TestClient):
-    response = client.post("/auth/token", data={"username": "test", "password": "not_a_test"})
+    response = client.post("/login", data={"username": "test", "password": "not_a_test"})
     assert response.status_code == 401
 
 
@@ -66,27 +66,27 @@ def test_request_no_auth(client: TestClient):
 
 def test_ok_auth(client: TestClient, event_loop: asyncio.AbstractEventLoop):
     user = event_loop.run_until_complete(get_user_from_db(username='test'))
-    response = client.post("/auth/token", data={"username": "test", "password": "test"})
+    response = client.post("/login", data={"username": "test", "password": "test"})
     assert response.status_code == 200
     assert 'access_token' in response.json()
 
 
 def test_request_auth(client: TestClient):
-    auth_data = client.post("/auth/token", data={"username": "test", "password": "test"}).json()
+    auth_data = client.post("/login", data={"username": "test", "password": "test"}).json()
     response = client.get("/forecast?city=London&units=m",
                           headers={'Authorization': f'{auth_data["token_type"]} {auth_data["access_token"]}'})
     assert response.status_code == 200
 
 
 def test_request_wrong_city(client: TestClient):
-    auth_data = client.post("/auth/token", data={"username": "test", "password": "test"}).json()
+    auth_data = client.post("/login", data={"username": "test", "password": "test"}).json()
     response = client.get("/forecast?city=UnknownCity&units=m",
                           headers={'Authorization': f'{auth_data["token_type"]} {auth_data["access_token"]}'})
     assert response.status_code == 404  # api failed to get forecast for this city
 
 
 def test_request_wrong_units(client: TestClient):
-    auth_data = client.post("/auth/token", data={"username": "test", "password": "test"}).json()
+    auth_data = client.post("/login", data={"username": "test", "password": "test"}).json()
     response = client.get("/forecast?city=London&units=wrong_units",
                           headers={'Authorization': f'{auth_data["token_type"]} {auth_data["access_token"]}'})
     assert response.status_code == 422  # units query param validation results in 422

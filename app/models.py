@@ -18,3 +18,12 @@ UserPydantic = pydantic_model_creator(Users, name="Users")
 class UserLoginModel(BaseModel):
     username: str
     password: str
+
+
+class MsgResponseModel(BaseModel):
+    msg: str
+
+
+class LoginResponseModel(BaseModel):
+    access_token: str
+    token_type: str

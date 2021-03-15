@@ -1,3 +1,4 @@
+from functools import wraps
 from typing import Optional
 
 import aiohttp
@@ -11,12 +12,12 @@ from fastapi_cache.decorator import cache
 from tortoise.contrib.fastapi import register_tortoise
 
 from .config import settings
-from .models import UserPydantic, Users, UserLoginModel
+from .models import UserPydantic, Users, UserLoginModel, MsgResponseModel, LoginResponseModel
 from .utils import api_get_weather, authenticate_user, create_user
 
 app = FastAPI()
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
@@ -32,19 +33,43 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     return await UserPydantic.from_tortoise_orm(user)
 
 
-@app.post('/signup')
+def base_exception_handler(view):
+    """Base exception handler to prevent server internal error from unhandled exceptions"""
+
+    @wraps(view)
+    async def wrapper(*args, **kwargs):
+        try:
+            res = await view(*args, **kwargs)
+        except HTTPException:
+            # HTTPException is handled by FastAPI, resulting in response with error details
+            raise
+        except Exception as e:
+            # Using  HTTPException to create response with error details
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        return res
+
+    return wrapper
+
+
+@app.post('/signup', response_model=MsgResponseModel)
+@base_exception_handler
 async def signup(user_data: UserLoginModel):
-    print(user_data)
+    """
+    Creates a new user with provided username and password
+    """
     user = await create_user(user_data.username, user_data.password)
     if not user:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail="user already exists")
-    return {
-        "msg": "user created"
-    }
+
+    return MsgResponseModel(msg="user created")
 
 
-@app.post('/auth/token')
+@app.post('/login', response_model=LoginResponseModel)
+@base_exception_handler
 async def login(login_form: OAuth2PasswordRequestForm = Depends()):
+    """
+    Performs login with username and password, returns access_token
+    """
     username = login_form.username
     password = login_form.password
     authenticated_user = await authenticate_user(username, password)
@@ -56,18 +81,20 @@ async def login(login_form: OAuth2PasswordRequestForm = Depends()):
 
         token = jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
 
-        return {
-            "access_token": token,
-            "token_type": "bearer",
-        }
+        return LoginResponseModel(access_token=token, token_type="bearer")
 
     raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password")
 
 
 @app.get('/forecast')
+@base_exception_handler
 @cache(expire=60)
 async def get_forecast(city: str, units: Optional[str] = Query(..., regex='^[mf]$'),
                        current_user: UserPydantic = Depends(get_current_user)):
+    """
+    Returns weather forecast JSON for specified city,
+    with temperature in Celsius (units=m) or Fahrenheit (units=f)
+    """
     # current_user injection for preventing non-authenticated requests
     result = await api_get_weather(settings.WEATHER_API_KEY, city, units, app.client_session)
     error_msg = result.get('error')
