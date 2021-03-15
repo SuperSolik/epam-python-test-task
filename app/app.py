@@ -105,7 +105,7 @@ async def get_forecast(city: str, units: Optional[str] = Query(..., regex='^[mf]
 
 @app.on_event('startup')
 async def handle_startup():
-    # setup redis cache and client session got API requests
+    """Setup redis cache and client session for weather API requests"""
     redis = await aioredis.create_redis_pool(settings.REDIS_URL, encoding="utf8")
     FastAPICache.init(RedisBackend(redis), prefix="weather-app-cache")
     app.client_session = aiohttp.ClientSession()
@@ -113,7 +113,7 @@ async def handle_startup():
 
 @app.on_event('shutdown')
 async def handle_shutdown():
-    # cleanup client session
+    """Cleanup client session"""
     await app.client_session.close()
 
 
