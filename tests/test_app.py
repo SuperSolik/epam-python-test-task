@@ -43,35 +43,35 @@ def test_signup(client: TestClient, event_loop: asyncio.AbstractEventLoop):
     assert user is not None
 
 
-def test_duplicate_login(client: TestClient):
+def test_duplicate_signup(client: TestClient):
     # test db is up for all test cases, so user 'test' is already exists
     response = client.post("/signup", json={"username": "test", "password": "test"})
     assert response.status_code == 422
 
 
-def test_auth_not_existing_user(client: TestClient):
+def test_login_not_existing_user(client: TestClient):
     response = client.post("/login", data={"username": "not_existing_user", "password": "123"})
     assert response.status_code == 401
 
 
-def test_auth_wrong_password(client: TestClient):
+def test_login_wrong_password(client: TestClient):
     response = client.post("/login", data={"username": "test", "password": "not_a_test"})
     assert response.status_code == 401
 
 
-def test_request_no_auth(client: TestClient):
+def test_request_without_login(client: TestClient):
     response = client.get("/forecast?city=London&units=m")
     assert response.status_code == 401
 
 
-def test_ok_auth(client: TestClient, event_loop: asyncio.AbstractEventLoop):
+def test_login_ok(client: TestClient, event_loop: asyncio.AbstractEventLoop):
     user = event_loop.run_until_complete(get_user_from_db(username='test'))
     response = client.post("/login", data={"username": "test", "password": "test"})
     assert response.status_code == 200
     assert 'access_token' in response.json()
 
 
-def test_request_auth(client: TestClient):
+def test_request_with_login(client: TestClient):
     auth_data = client.post("/login", data={"username": "test", "password": "test"}).json()
     response = client.get("/forecast?city=London&units=m",
                           headers={'Authorization': f'{auth_data["token_type"]} {auth_data["access_token"]}'})
