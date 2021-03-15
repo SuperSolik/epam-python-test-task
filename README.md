@@ -17,7 +17,7 @@ WEATHER_API_KEY="API key for https://weatherstack.com/"
 WEATHER_JWT_SECRET="your-jwt-secret"
 ```
 
-plus for Docker configuration (useful when deploy to Heroku for exampple)
+plus for Docker configuration
 
 ```dotenv
 PORT=<port-inside-docker> 
